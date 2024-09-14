@@ -1,0 +1,14 @@
+[Unit]
+DefaultDependencies=no
+RequiresMountsFor=/etc/
+ConditionPathExists=/etc/mkosi.cer
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardInput=file:/etc/mkosi.cer
+ExecStart=keyctl padd asymmetric "mkosi" %%keyring:.fs-verity
+ExecStart=keyctl restrict_keyring %%keyring:.fs-verity
+
+[Install]
+WantedBy=sysinit.target

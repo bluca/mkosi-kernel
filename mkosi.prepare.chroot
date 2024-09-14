@@ -1,0 +1,41 @@
+#!/bin/sh
+# SPDX-License-Identifier: LGPL-2.1-or-later
+set -e
+
+rm -rf /etc/dbus-1 /etc/polkit-1
+rm -rf /usr/lib/systemd/system/dbus-broker.service
+rm -rf /usr/lib/systemd/user/dbus-broker.service
+rm -rf /usr/lib/systemd/catalog/dbus-broker-launch.catalog
+rm -rf /usr/lib/systemd/catalog/dbus-broker.catalog
+rm -rf /usr/bin/dbus-broker-launch
+rm -rf /usr/bin/dbus-broker
+rm -f /etc/systemd/system/dbus.service
+
+mkdir -p /etc/ipe
+cat <<EOF >/etc/ipe/ipe-policy
+policy_name=ipe-policy policy_version=0.0.1
+DEFAULT action=ALLOW
+
+DEFAULT op=EXECUTE action=DENY
+op=EXECUTE boot_verified=TRUE action=ALLOW
+op=EXECUTE dmverity_signature=TRUE action=ALLOW
+
+DEFAULT op=KERNEL_READ action=DENY
+op=KERNEL_READ boot_verified=TRUE action=ALLOW
+op=KERNEL_READ dmverity_signature=TRUE action=ALLOW
+
+DEFAULT op=READ action=ALLOW
+
+op=READ intended_pathname=/etc/portables/* dmverity_signature=FALSE fsverity_signature=FALSE action=ALLOW
+op=READ intended_pathname=/etc/hostname dmverity_signature=FALSE fsverity_signature=FALSE action=ALLOW
+op=READ intended_pathname=/etc/resolv.conf dmverity_signature=FALSE fsverity_signature=FALSE action=ALLOW
+op=READ intended_pathname=/etc/machine-id dmverity_signature=FALSE fsverity_signature=FALSE action=ALLOW
+op=READ intended_pathname=/etc/mtab dmverity_signature=FALSE fsverity_signature=FALSE action=ALLOW
+
+op=READ intended_pathname=/etc/* dmverity_signature=FALSE fsverity_signature=FALSE action=DENY
+op=READ intended_pathname=/var/etc/systemd/* dmverity_signature=FALSE fsverity_signature=FALSE action=DENY
+op=READ intended_pathname=/var/etc/dbus-1/* dmverity_signature=FALSE fsverity_signature=FALSE action=DENY
+op=READ intended_pathname=/var/etc/polkit-1/* dmverity_signature=FALSE fsverity_signature=FALSE action=DENY
+EOF
+openssl smime -sign -in /etc/ipe/ipe-policy -signer "$SRCDIR/mkosi.crt" -inkey "$SRCDIR/mkosi.key" -noattr -nodetach -nosmimecap -outform der -out /etc/ipe/ipe-policy.p7b
+rm -f /etc/ipe/ipe-policy
